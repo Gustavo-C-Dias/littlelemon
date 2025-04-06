@@ -1,18 +1,25 @@
-//
-//  Header.swift
-//  LittleLemon
-//
-//  Created by Gustavo on 06/04/25.
-//
-
 import SwiftUI
 
 struct Header: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-    }
-}
+    @State var isLoggedIn = false
 
-#Preview {
-    Header()
+    var body: some View {
+        NavigationStack {
+            VStack {
+                Image("logo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 160, height: 70)
+            }
+        }
+        .frame(maxHeight: 60)
+        .padding(.bottom)
+        .onAppear() {
+            if UserDefaults.standard.bool(forKey: keyIsLoggedIn) {
+                isLoggedIn = true
+            } else {
+                isLoggedIn = false
+            }
+        }
+    }
 }

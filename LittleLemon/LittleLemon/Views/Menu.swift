@@ -4,30 +4,26 @@ import CoreData
 struct Menu: View {
     @Environment(\.managedObjectContext) private var viewContext
     @State private var searchText: String = ""
+    
     var body: some View {
         VStack {
-            Text("Title")
-            Text("Chicago")
-            Text("Description")
-            
-            TextField("Search menu", text: $searchText)
+            VStack {
+                Banner()
+                TextField("Search menu", text: $searchText)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(.white)
+                    .foregroundColor(Color.neutral2)
+                    .cornerRadius(8)
+                    .padding()
+            }.background(Color.primary1)
             
             FetchedObjects(
                 predicate: buildPredicate(),
                 sortDescriptors: buildSortDescriptors()
             ) { (dishes: [Dish]) in
-                List(dishes, id: \.id) { dish in
-                    HStack {
-                        Text("\(dish.title ?? "Sem título") - $\(dish.price ?? "0.0")")
-                        
-                        AsyncImage(url: URL(string: dish.image!)) { image in
-                            image.resizable()
-                                .scaledToFit()
-                                .frame(width: 50, height: 50)
-                        } placeholder: {
-                            ProgressView()
-                        }
-                    }
+                List(dishes) { dish in
+                    ItemFood(dish: dish)
                 }
             }
         }.onAppear {
@@ -38,48 +34,41 @@ struct Menu: View {
     func getMenuData() {
         PersistenceController.shared.clear()
         
-        let urlString = "https://raw.githubusercontent.com/Meta-Mobile-Developer-PC/Working-With-Data-API/main/menu.json"
-        let url = URL(string: urlString)!
-        let request = URLRequest(url: url)
-        
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                print("Erro na requisição: \(error.localizedDescription)")
-                return
-            }
-            
+        let url = URL(string: "https://raw.githubusercontent.com/Meta-Mobile-Developer-PC/Working-With-Data-API/main/menu.json")
+        let request = URLRequest(url: url!)
+        let session = URLSession.shared
+
+        let task = session.dataTask(with: request) { data, response, error in
             guard let data = data else {
-                print("Dados inválidos")
+                print("Dados inválidos: \(error?.localizedDescription ?? "Erro desconhecido")")
                 return
             }
-            
-            let decoder = JSONDecoder()
+
             do {
+                let decoder = JSONDecoder()
                 let decodedData = try decoder.decode(MenuList.self, from: data)
                 let menuItems = decodedData.menu
-                
+                let viewContext = PersistenceController.shared.container.viewContext
+
                 DispatchQueue.main.async {
-                    let viewContext = PersistenceController.shared.container.viewContext
-                    
-                    for menuItem in menuItems {
+                    for item in menuItems {
                         let dish = Dish(context: viewContext)
-                        dish.title = menuItem.title
-                        dish.image = menuItem.image
-                        dish.price = menuItem.price
+                        dish.title = item.title
+                        dish.image = item.image
+                        dish.price = item.price
                     }
-                    
+
                     do {
                         try viewContext.save()
-                        print("Dados salvos com sucesso!")
                     } catch {
-                        print("Erro ao salvar no banco de dados: \(error.localizedDescription)")
+                        print("Erro ao salvar no CoreData: \(error.localizedDescription)")
                     }
                 }
+
             } catch {
                 print("Erro ao decodificar os dados: \(error.localizedDescription)")
             }
         }
-        
         task.resume()
     }
     
@@ -99,8 +88,4 @@ struct Menu: View {
         }
         return NSPredicate(format: "title CONTAINS[cd] %@", searchText)
     }
-}
-
-#Preview {
-    Menu()
 }
